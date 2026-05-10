@@ -1,0 +1,49 @@
+# Microdados brutos (NUNCA commitar)
+data/raw/*
+!data/raw/.gitkeep
+
+# Dados processados grandes (commitar somente amostras pequenas, se necessário)
+data/processed/*.zip
+data/processed/*.parquet
+
+# R / RStudio
+.Rproj.user/
+.Rhistory
+.Rdata
+.Ruserdata
+.Renviron
+
+# renv (mantém apenas lockfile e activate.R)
+renv/library/
+renv/local/
+renv/cellar/
+renv/lock/
+renv/python/
+renv/sandbox/
+renv/staging/
+
+# targets (artefatos do pipeline; mantém só _targets.R)
+_targets/
+
+# Quarto / RMarkdown
+*_files/
+*_cache/
+*.html
+*.pdf
+!docs/**/*.pdf
+.quarto/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+
+# Credenciais e segredos
+*.json.bak
+secrets.*
+.env
+.env.*

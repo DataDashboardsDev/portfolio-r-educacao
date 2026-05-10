@@ -1,0 +1,34 @@
+Package: portfolioReducacao
+Title: Trajetória de matrícula e conclusão do EM em SP — Censo Escolar 2019–2023
+Version: 0.1.0
+Authors@R:
+    person("Samuel", "Volpe", email = "samuvolpe1@gmail.com", role = c("aut", "cre"))
+Description: Pipeline reprodutível em R para tratamento, análise e modelagem
+    de microdados do Censo Escolar (INEP), com foco em jovens de 15 a 17 anos
+    matriculados no Ensino Médio no estado de São Paulo entre 2019 e 2023.
+    Inclui rotinas de download, limpeza, anonimização (LGPD), construção de
+    painel longitudinal, estatísticas descritivas, diagnóstico de bases e
+    modelagem de probabilidade de conclusão com efeitos fixos municipais.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Depends:
+    R (>= 4.3.0)
+Imports:
+    targets,
+    tarchetypes,
+    here,
+    dplyr,
+    tidyr,
+    readr,
+    data.table,
+    stringr,
+    janitor,
+    fixest,
+    skimr,
+    naniar,
+    ggplot2,
+    scales,
+    knitr,
+    quarto
