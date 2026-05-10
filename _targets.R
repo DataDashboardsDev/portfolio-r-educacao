@@ -44,13 +44,21 @@ list(
   tar_target(anos_alvo, 2019:2023),
   tar_target(uf_alvo,   "SP"),
 
+  # Branch sobre cada ano (gera um arquivo por ano via dynamic branching)
   tar_target(
-    arquivos_brutos,
-    baixar_censo_escolar(anos = anos_alvo, dir = here::here("data", "raw")),
-    format = "file"
+    ano_alvo_branch,
+    anos_alvo,
+    pattern = map(anos_alvo)
   ),
 
-  # 2. Limpeza ano a ano (map sobre anos) -------------------------------------
+  tar_target(
+    arquivos_brutos,
+    baixar_um_ano(ano_alvo_branch, dir = here::here("data", "raw")),
+    pattern = map(ano_alvo_branch),
+    format  = "file"
+  ),
+
+  # 2. Limpeza ano a ano -------------------------------------------------------
   tar_target(
     matriculas_por_ano,
     limpar_matriculas_ano(
