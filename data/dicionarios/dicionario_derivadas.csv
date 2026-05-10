@@ -1,0 +1,11 @@
+nome_var,tipo,descricao,formula,referencia
+ano_censo,int,Ano do Censo (cópia tipada de nu_ano_censo),"ano = nu_ano_censo",R/02_clean_matriculas.R
+faixa_idade,factor,"Fator de idade ordenado: 15, 16, 17 anos","cut(nu_idade)",R/02_clean_matriculas.R
+sexo,factor,"Sexo como fator (Masculino, Feminino)","factor(tp_sexo)",R/02_clean_matriculas.R
+cor_raca,factor,"Cor/raça como fator (Não declarada, Branca, Preta, Parda, Amarela, Indígena)","factor(tp_cor_raca)",R/02_clean_matriculas.R
+dep_admin,factor,"Dependência administrativa como fator (Federal, Estadual, Municipal, Privada)","factor(tp_dependencia)",R/02_clean_matriculas.R
+eja_em,int,"Indicador de matrícula em EJA do EM (1=Sim, 0=Não)","tp_etapa_ensino %in% c(71,72,73,74)",R/02_clean_matriculas.R
+ept_int,int,"Indicador de EM integrado à Educação Profissional Tecnológica (1=Sim, 0=Não)","tp_etapa_ensino %in% c(30,31,32,33,34)",R/02_clean_matriculas.R
+co_entidade_hash,chr,Hash SHA-256 truncado a 12 chars do código INEP da escola (LGPD),"substr(digest::digest(co_entidade,'sha256'),1,12)",R/utils_anonimizacao.R
+prob_conclusao,num,Probabilidade preditiva (modelo logit) de conclusão regular,Modelo fixest::feglm,R/05_modelo_conclusao.R
+y_concluiu,int,Variável-resposta binária do modelo: aprovado/concluído no ano,Derivada de tp_situacao,R/05_modelo_conclusao.R

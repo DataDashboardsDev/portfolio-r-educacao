@@ -1,0 +1,41 @@
+nome_var,tipo,descricao,dominio,fonte
+nu_ano_censo,int,Ano de referência do Censo Escolar,2019;2020;2021;2022;2023,INEP
+co_uf,int,Código IBGE da Unidade da Federação,11-53,IBGE
+sg_uf,chr,Sigla da Unidade da Federação,AC-TO,IBGE
+co_municipio,int,Código IBGE do município (7 dígitos),3500105-3557303,IBGE
+no_municipio,chr,Nome do município,Texto livre,IBGE
+co_entidade,int,Código INEP da escola,Inteiro positivo,INEP
+nu_idade,int,Idade do estudante em anos completos,0-99,INEP
+tp_sexo,int,"Sexo (1=Masculino, 2=Feminino)",1;2,INEP
+tp_cor_raca,int,"Cor/raça (0=Não decl.; 1=Branca; 2=Preta; 3=Parda; 4=Amarela; 5=Indígena)",0-5,INEP
+tp_nacionalidade,int,"Nacionalidade (1=Brasileira; 2=Naturalizada; 3=Estrangeira)",1-3,INEP
+co_pais_origem,int,Código do país de origem (se não brasileiro),0-9999,INEP
+co_uf_nasc,int,UF de nascimento,11-53,INEP
+co_municipio_nasc,int,Município de nascimento,Inteiro,IBGE
+tp_zona_residencia,int,"Zona de residência (1=Urbana, 2=Rural)",1;2,INEP
+in_necessidade_especial,int,"Possui necessidade especial (0=Não, 1=Sim)",0;1,INEP
+tp_etapa_ensino,int,Código da etapa de ensino (ver dicionário INEP),1-78,INEP
+tp_dependencia,int,"Dependência administrativa da escola (1=Federal; 2=Estadual; 3=Municipal; 4=Privada)",1-4,INEP
+tp_localizacao,int,"Localização da escola (1=Urbana, 2=Rural)",1;2,INEP
+co_curso_prof,int,Código do curso profissionalizante (se aplicável),0-9999,INEP
+in_transporte_publico,int,"Utiliza transporte escolar público (0=Não, 1=Sim)",0;1,INEP
+tp_tipo_atendimento,int,Código do tipo de atendimento da turma,1-10,INEP
+tp_mediacao_didatico_pedag,int,"Mediação didática (1=Presencial, 2=Semipresencial, 3=EaD)",1-3,INEP
+in_regular,int,"Turma de ensino regular (0=Não, 1=Sim)",0;1,INEP
+in_eja,int,"Educação de Jovens e Adultos (0=Não, 1=Sim)",0;1,INEP
+in_profissionalizante,int,"Curso profissionalizante (0=Não, 1=Sim)",0;1,INEP
+nu_dias_atividade,int,Número de dias de atividade na turma,0-365,INEP
+nu_dura_turma,int,Duração da turma em minutos,Inteiro,INEP
+tp_localizacao_diferenciada,int,Código da localização diferenciada (assentamentos etc.),0-8,INEP
+in_aluno_diferenciado,int,Aluno em localização diferenciada,0;1,INEP
+in_pne_cegueira,int,Necessidade especial: cegueira,0;1,INEP
+in_pne_baixa_visao,int,Necessidade especial: baixa visão,0;1,INEP
+in_pne_surdez,int,Necessidade especial: surdez,0;1,INEP
+in_pne_def_auditiva,int,Necessidade especial: deficiência auditiva,0;1,INEP
+in_pne_def_fisica,int,Necessidade especial: deficiência física,0;1,INEP
+in_pne_def_intelectual,int,Necessidade especial: deficiência intelectual,0;1,INEP
+in_pne_def_multipla,int,Necessidade especial: deficiência múltipla,0;1,INEP
+in_pne_autismo,int,Necessidade especial: transtorno do espectro autista,0;1,INEP
+in_pne_superdotacao,int,Necessidade especial: altas habilidades/superdotação,0;1,INEP
+in_publico,int,"Escola pública (0=Não, 1=Sim)",0;1,INEP
+co_regiao,int,Código da região geográfica (1=N; 2=NE; 3=SE; 4=S; 5=CO),1-5,IBGE
