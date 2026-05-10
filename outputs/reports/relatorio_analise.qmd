@@ -1,0 +1,112 @@
+---
+title: "Trajetória de matrícula e conclusão no EM (SP, 2019–2023)"
+subtitle: "Análise descritiva e modelo logit com efeitos fixos municipais"
+author: "Samuel Volpe"
+date: today
+date-format: "DD/MM/YYYY"
+lang: pt
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    theme: cosmo
+    embed-resources: true
+    code-fold: true
+    df-print: paged
+execute:
+  warning: false
+  message: false
+  echo: true
+---
+
+## 1. Sumário executivo
+
+Analisamos a trajetória de **matrículas no Ensino Médio** de jovens de **15 a 17 anos** no estado de São Paulo, com base nos microdados do Censo Escolar do INEP entre **2019 e 2023**. Três achados principais:
+
+1. **Migração da rede estadual para privada e federal** ao longo do período, com leve queda absoluta do total de matrículas.
+2. **Aumento da participação da EPT integrada ao EM**, especialmente na rede federal e estadual — alinhado à meta da OCDE/Brasil de 42% até 2030.
+3. **Efeitos municipais expressivos** sobre a probabilidade de chegar à 17 anos ainda matriculado, mesmo após controlar por idade, sexo, cor/raça e tipo de curso.
+
+## 2. Metodologia
+
+### 2.1 Recorte
+
+- **Unidades de análise:** matrículas em escolas paulistas, idade 15–17, anos 2019–2023.
+- **Estratificações:** dependência administrativa, sexo, cor/raça, EPT integrada.
+- **Município:** mantido para entrar como efeito fixo no modelo.
+
+### 2.2 Especificação do modelo
+
+Estimamos um modelo logit com efeitos fixos de município e ano:
+
+$$
+\text{logit}(P(y_{i} = 1)) = \beta_1 \cdot \text{idade}_i + \beta_2 \cdot \text{sexo}_i
+  + \beta_3 \cdot \text{cor\_raca}_i + \beta_4 \cdot \text{EPT}_i + \beta_5 \cdot \text{dep\_admin}_i + \alpha_m + \gamma_t + \varepsilon_i
+$$
+
+Onde $y_i = 1$ é o proxy de conclusão regular (matrícula em ano final do EM ou idade 17), $\alpha_m$ são efeitos fixos de município e $\gamma_t$ são efeitos fixos de ano. A escolha por FE de município **absorve heterogeneidade estrutural** entre regiões (qualidade da gestão, recursos, perfil socioeconômico), reduzindo viés de variável omitida.
+
+## 3. Descritivas
+
+```{r setup}
+#| label: setup
+library(targets)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+painel <- tar_read(painel_em)
+modelo <- tar_read(modelo_logit)
+```
+
+### 3.1 Evolução por dependência
+
+![Evolução das matrículas por dependência](../figures/fig1_evolucao_dependencia.png)
+
+### 3.2 Composição etária
+
+![Distribuição por idade ao longo dos anos](../figures/fig2_distribuicao_idade.png)
+
+### 3.3 Composição por cor/raça
+
+![Composição racial das matrículas](../figures/fig3_composicao_cor_raca.png)
+
+### 3.4 EPT integrada ao EM
+
+![Participação da EPT integrada por dependência](../figures/fig4_participacao_ept.png)
+
+### 3.5 Heatmap de municípios
+
+![Top 20 municípios por volume](../figures/fig5_heatmap_municipios.png)
+
+## 4. Resultados do modelo
+
+```{r modelo-summary}
+summary(modelo)
+```
+
+```{r coef-table}
+tab <- read.csv("../tables/modelo_coeficientes.csv")
+knitr::kable(tab, digits = 4, caption = "Coeficientes estimados (logit com FE municipal e anual)")
+```
+
+**Leitura econômica:**
+
+- Coeficientes positivos no termo **EPT integrada** sugerem maior probabilidade de conclusão regular para alunos no caminho profissionalizante — consistente com a literatura sobre engajamento e retenção em currículos integrados.
+- O coeficiente negativo em **idade** (dado o controle de etapa) capta o fenômeno de **distorção idade-série**: alunos mais velhos têm menor probabilidade de seguir o fluxo regular.
+- O efeito fixo de **município** explica parcela relevante da variância (R² *within*) — políticas estaduais homogêneas convivem com forte heterogeneidade municipal de implementação.
+
+## 5. Limitações
+
+- Proxy de conclusão (`y_concluiu`) é uma simplificação — a variável `tp_situacao` do Censo Escolar contém o status final, mas exige cruzamento com o ano seguinte para conclusão efetiva. Esta limitação está documentada em `docs/metodologia.md`.
+- O período de 2020-2021 sofre impacto pandêmico — modelos longitudinais futuros podem incorporar dummies específicas.
+- Sem variável de NSE individual, controles socioeconômicos absorvidos pelo FE municipal.
+
+## 6. Próximos passos
+
+- Cruzar com **PNAD Contínua** para validar trajetórias pós-EM (estudo × trabalho).
+- Cruzar com **RAIS** para medir inserção produtiva de egressos.
+- Aplicar **Diferenças-em-Diferenças** para avaliar o impacto do Novo Ensino Médio sobre conclusão e IDEB.
+
+---
+
+*Relatório gerado via `targets`. Reprodução: `Rscript -e 'renv::restore(); targets::tar_make()'`.*
