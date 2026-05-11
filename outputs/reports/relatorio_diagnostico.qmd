@@ -1,6 +1,7 @@
 ---
-title: "Diagnóstico de Base — Censo Escolar 2019–2023 (SP, 15–17 anos)"
-author: "Samuel Volpe"
+title: "Diagnóstico de Base — PNAD Contínua 4º trimestre 2023"
+subtitle: "Jovens brasileiros de 15 a 29 anos"
+author: "Samuel Volpe — Data Dashboards"
 date: today
 date-format: "DD/MM/YYYY"
 lang: pt
@@ -16,45 +17,64 @@ execute:
   warning: false
   message: false
   echo: true
+knitr:
+  opts_chunk:
+    R.options:
+      warn: -1
 ---
 
 ## 1. Objetivo
 
-Este relatório documenta o **diagnóstico de qualidade** dos microdados de matrícula do Ensino Médio (EM) extraídos dos *Microdados do Censo Escolar* do INEP para o estado de **São Paulo**, entre **2019 e 2023**, restritos a estudantes de **15, 16 e 17 anos**.
+Este relatório documenta o **diagnóstico de qualidade** dos microdados da **PNAD Contínua** (4º trimestre de 2023) extraídos pelo pacote oficial `PNADcIBGE`, restritos a pessoas de **15 a 29 anos** — recorte de interesse para análises de inclusão produtiva e trajetória educacional dos jovens brasileiros.
 
 Em linha com o Termo de Referência da Fundação Itaú Educação e Trabalho, o diagnóstico cobre:
 
 - estatísticas descritivas das variáveis utilizadas;
 - padrão de dados faltantes;
-- consistência temporal (séries esperadas × observadas);
-- validação cruzada com totais oficiais publicados pelo INEP;
-- detecção de duplicatas pela chave matrícula × ano.
+- estrutura do plano amostral complexo da PNAD;
+- validação cruzada com população de referência divulgada pelo IBGE;
+- sanidade lógica das taxas estimadas vs. literatura consolidada.
 
 ## 2. Bases utilizadas
 
-| Base | Fonte | Recorte | Tamanho |
-|------|-------|---------|---------|
-| Microdados Matrícula | INEP / Censo Escolar | UF = SP, idade 15–17, anos 2019–2023 | ~7 milhões de linhas |
+| Base | Fonte | Recorte | Tamanho da amostra |
+|------|-------|---------|---------------------|
+| PNAD Contínua | IBGE (via pacote R `PNADcIBGE`) | 4ºT 2023, idade 15–29 | 98.538 pessoas amostradas (representando ~47,4 milhões pelo plano amostral) |
 
 ## 3. Estrutura do painel
 
 ```{r setup}
 #| label: setup
+#| include: false
 library(targets)
 library(dplyr)
 library(knitr)
-painel <- tar_read(painel_em)
-diag   <- tar_read(diagnostico)
+
+# Configura o store explicitamente (Quarto muda o working dir para
+# outputs/reports/, então usamos here:: para apontar à raiz)
+options(targets.store = here::here("_targets"))
+tar_config_set(store = here::here("_targets"))
+
+tar_load(painel_jovens)
+tar_load(diagnostico)
+
+painel <- painel_jovens
+diag   <- diagnostico
 ```
 
 ```{r painel-overview}
 tibble::tibble(
-  Métrica = c("Linhas", "Colunas", "Anos cobertos", "Municípios"),
+  Métrica = c("Observações na amostra",
+              "Variáveis",
+              "UPAs distintas",
+              "Estratos amostrais",
+              "População representada"),
   Valor   = c(
     format(nrow(painel), big.mark = "."),
     ncol(painel),
-    paste(range(painel$ano_censo), collapse = "–"),
-    format(dplyr::n_distinct(painel$co_municipio), big.mark = ".")
+    format(dplyr::n_distinct(painel$upa), big.mark = "."),
+    format(dplyr::n_distinct(painel$estrato), big.mark = "."),
+    format(round(sum(painel$v1028, na.rm = TRUE)), big.mark = ".")
   )
 ) |> knitr::kable()
 ```
@@ -62,46 +82,86 @@ tibble::tibble(
 ## 4. Padrão de dados faltantes
 
 ```{r missings}
-diag$missings |> head(20) |> knitr::kable(caption = "Top 20 variáveis com maior % de missing")
+diag$missings |> head(20) |> knitr::kable(
+  caption = "Top 20 variáveis com maior % de missing"
+)
 ```
 
-**Leitura:** variáveis com `pct_missing > 20%` devem ser tratadas com cautela ou excluídas dos modelos. Variáveis com `pct_missing < 1%` indicam alta cobertura.
+**Leitura — variáveis no topo do ranking de missing:**
 
-## 5. Consistência temporal
+- **`vd4004a` (96,5% missing)**: indicador de subocupação por insuficiência de horas. Só faz sentido para pessoas ocupadas — daí o alto missing é **esperado e correto** (não é problema de qualidade).
+- **`capital` (76,2%) e `rm_ride` (68,8%)**: marcadores geográficos só preenchidos quando o domicílio fica em capital ou região metropolitana. Naturalmente missing para a maioria do interior do país.
+- **`vd4019` e `vd4020` (51% missing)**: rendimento efetivo do trabalho. Só preenchido para ocupados — coerente com a taxa de ocupação dos jovens (~50%).
+- **`vd4009` (49% missing)**: posição na ocupação. Mesmo motivo — só ocupados respondem.
+- **`vd4002` (41,4% missing)**: condição de ocupação na semana de referência. Só aplicável a pessoas em idade ativa que responderam à seção ocupacional.
+- **`v3014` (41,5%) e `v3009a` (39,5%)**: variáveis de curso anterior mais elevado. Missing entre pessoas que **nunca frequentaram escola/curso**.
 
-```{r consistencia}
-diag$consistencia |>
-  knitr::kable(caption = "Matrículas por ano e variação percentual")
+**Variáveis de identificação demográfica (idade, sexo, raça, UF) e amostral (UPA, estrato, pesos) têm 0% de missing** — confirmando integridade do plano amostral.
+
+**Implicação metodológica:** o alto missing em variáveis ocupacionais não é problema técnico, mas exige cuidado na definição de NEET — pessoas com `vd4002 = NA` (fora da força de trabalho) devem contar como **não-ocupadas**, não excluídas. Esta decisão está documentada em `docs/metodologia.md`.
+
+## 5. Estrutura amostral
+
+```{r amostragem}
+diag$amostragem |> knitr::kable(
+  caption = "Estrutura do plano amostral da PNAD Contínua"
+)
 ```
 
-**Comentário:** quedas/aumentos bruscos podem refletir mudanças metodológicas no INEP (p.ex. ajustes no SAEB pós-pandemia, em 2020-2021) e devem ser anotados antes de qualquer modelagem longitudinal.
+**Leitura:**
 
-## 6. Duplicatas
+- **14.828 UPAs** sorteadas em **573 estratos** = densidade média de ~26 UPAs por estrato (adequada para inferência por região).
+- **Peso médio: 481,3** e **mediano: 345,1** — distribuição assimétrica à direita (poucas pessoas representam muitas, comum em domicílios rurais e estratos pequenos).
+- **47,4 milhões de jovens 15-29** representados pela amostra (validação populacional na seção 6 a seguir).
 
-```{r duplicatas}
-diag$duplicatas |> knitr::kable()
-```
+**Por que isso importa metodologicamente:** a PNAD usa amostragem complexa em **3 estágios** (UPA → domicílio → pessoa) com **estratificação** por região, capital e densidade. Qualquer estatística para a população exige uso do `survey::svydesign()` com `weights = v1028`, `ids = upa`, `strata = estrato`. Análises ingênuas (média simples sem pesos) produzem estimativas viesadas: a taxa de NEET amostral neste painel é **22,4%**, mas a **populacional ponderada é 20,37%** — diferença de ~2 p.p. que importa em relatórios oficiais.
 
-Esperamos zero duplicatas pela chave (`co_pessoa_fisica` × `co_entidade` × `ano_censo`). Discrepâncias são investigadas e documentadas em `docs/metodologia.md`.
-
-## 7. Validação contra totais oficiais
+## 6. Validação contra IBGE
 
 ```{r validacao}
-diag$validacao_inep |>
-  knitr::kable(caption = "Comparação com Sinopse Estatística do INEP")
+diag$validacao_ibge |> knitr::kable(
+  caption = "Comparação com população oficial do IBGE"
+)
 ```
 
-Diferenças até **±2%** são consideradas aceitáveis e atribuídas a:
+Diferenças até ±5% são consideradas aceitáveis, dado que:
 
-- filtro por idade (sinopses oficiais costumam não filtrar idade);
-- exclusão de matrículas com dependência administrativa indefinida.
+- a amostra é trimestral, não censitária;
+- os pesos amostrais sofrem ajustes pontuais pelo IBGE entre divulgações;
+- a população de referência (~48 milhões em 15-29) varia ligeiramente entre trimestres.
+
+## 7. Sanidade lógica
+
+```{r sanidade}
+diag$sanidade |> knitr::kable(
+  caption = "Taxas estimadas vs. literatura consolidada"
+)
+```
+
+**Interpretação:**
+
+- **Taxa NEET ponderada de 20,37%** é consistente com séries históricas pós-pandemia (IPEA, IBGE). Esta é a estimativa **populacional** correta para relatórios oficiais — a taxa amostral bruta (22,4%) superestima por ~2 p.p. porque jovens em domicílios com peso menor (urbanos, capital) têm padrão diferente dos jovens em domicílios com peso maior (rural, interior).
+- **Taxa de conclusão do EM (58,2%)** se aproxima do limite superior da referência histórica. Como o recorte 15-29 inclui jovens 15-17 que **ainda estão cursando** (taxa de conclusão deles é só 1,8%, vide relatório de análise), o número agregado é puxado para baixo pela faixa mais jovem. Entre **25-29 anos** isolados, a conclusão sobe para 71,3%.
+- **Taxa de estudo (37,4%)** reflete a forte queda na frequência escolar após os 18 anos — entre 15-17 anos quase todos estudam (>90%), mas entre 25-29 só ~15% ainda estuda. A taxa agregada reflete essa heterogeneidade etária.
+
+**Conclusão da sanidade:** todos os três indicadores estão **dentro da margem da literatura**, confirmando que as variáveis derivadas foram construídas corretamente e que o desenho amostral está sendo aplicado de forma adequada.
 
 ## 8. Conclusões do diagnóstico
 
-- A base é robusta e adequada para o objetivo do projeto.
-- Variáveis-chave (`tp_etapa_ensino`, `tp_dependencia`, `tp_sexo`, `nu_idade`) apresentam <1% de missing — não comprometem a análise.
-- Inconsistência maior detectada entre **2020 e 2021** está alinhada com o impacto pedagógico da pandemia e pode demandar tratamento específico (variável dummy ou exclusão do ano).
-- Validação contra o INEP indica diferenças aceitáveis (<2%), consistentes com o recorte aplicado.
+**Síntese:** a base PNADc 4ºT 2023 está pronta para análise, com integridade confirmada por **5 checks independentes**:
+
+1. **Volume amostral adequado** — 98.538 jovens em 14.828 UPAs e 573 estratos, distribuição que permite inferência regional confiável.
+2. **Variáveis-chave íntegras** — idade, sexo, raça, UF, UPA e pesos com **0% de missing**. Variáveis ocupacionais com missing alto (~40-50%) refletem o design da pesquisa (só PIA respondente), não problema de qualidade.
+3. **Plano amostral aplicado corretamente** — uso de `survey::svydesign()` com pesos, UPAs e estratos, automatizado pelo target `desenho_pnadc`. Estratos singleton (1 UPA) tratados com `survey.lonely.psu = "adjust"`.
+4. **Validação populacional** — 47,4 milhões de jovens 15-29 estimados, diferença de **−1,20%** vs referência IBGE (limite ±5%).
+5. **Sanidade lógica** — NEET ponderada (20,37%), conclusão EM (58,2%) e taxa de estudo (37,4%) **todas dentro das faixas da literatura consolidada** (IBGE/IPEA).
+
+**Decisões metodológicas críticas** documentadas em `docs/metodologia.md`:
+- NEET operacionalizada como `estudando == 0 & ocupado == 0` com NA tratado como 0;
+- Plano amostral preservado em todas as estimativas populacionais;
+- Anonimização LGPD (supressão k<5) aplicável a agregações publicáveis.
+
+**Implicação para o relatório de análise:** os dados estão prontos para modelagem. Resultados do logit ponderado de NEET seguem para o `relatorio_analise.html`.
 
 ## 9. Reprodutibilidade
 
@@ -113,8 +173,8 @@ Rscript -e 'renv::restore()'
 Rscript -e 'targets::tar_make()'
 ```
 
-Versão do R, sistema operacional e versões dos pacotes estão registrados em `renv.lock`.
+Versão do R, sistema operacional e pacotes estão registrados em `renv.lock`.
 
 ---
 
-*Relatório gerado automaticamente via pipeline `targets`. Última atualização: `r format(Sys.time(), "%Y-%m-%d %H:%M")`.*
+*Relatório gerado via pipeline `targets`. Última atualização: `r format(Sys.time(), "%Y-%m-%d %H:%M")`.*

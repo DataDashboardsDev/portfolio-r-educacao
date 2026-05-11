@@ -1,0 +1,25 @@
+nome_var,tipo,descricao,dominio,fonte
+uf,int,Código IBGE da Unidade da Federação,11-53,IBGE/PNADc V_UF
+capital,int,Indicador de capital,Códigos IBGE,IBGE/PNADc V_Capital
+rm_ride,int,Indicador de Região Metropolitana ou RIDE,Códigos IBGE,IBGE/PNADc V_RM_RIDE
+v1022,int,"Situação do domicílio (1=Urbano, 2=Rural)",1;2,IBGE/PNADc
+v2007,int,"Sexo (1=Homem, 2=Mulher)",1;2,IBGE/PNADc
+v2009,int,Idade do morador em anos completos,0-130,IBGE/PNADc
+v2010,int,"Cor ou raça (1=Branca; 2=Preta; 3=Amarela; 4=Parda; 5=Indígena; 9=Ignorada)",1-9,IBGE/PNADc
+v3001,int,"Sabe ler e escrever (1=Sim, 2=Não)",1;2,IBGE/PNADc
+v3002,int,"Frequenta escola ou creche (1=Sim, 2=Não)",1;2,IBGE/PNADc
+v3003a,int,Código do curso que frequenta,Codificação IBGE,IBGE/PNADc
+v3009a,int,Código do curso mais elevado frequentado anteriormente,Codificação IBGE,IBGE/PNADc
+v3014,int,"Concluiu o curso mais elevado frequentado (1=Sim, 2=Não)",1;2,IBGE/PNADc
+vd3004,int,"Nível de instrução mais elevado alcançado (1-7)",1-7,IBGE/PNADc derivada
+vd3005,int,Anos de estudo completos,0-16,IBGE/PNADc derivada
+vd4001,int,Condição em relação à força de trabalho na semana de referência,1;2,IBGE/PNADc derivada
+vd4002,int,"Condição de ocupação (1=Ocupado, 2=Desocupado)",1;2,IBGE/PNADc derivada
+vd4003,int,Força de trabalho potencial,1;2,IBGE/PNADc derivada
+vd4004a,int,Subocupação por insuficiência de horas,1;2,IBGE/PNADc derivada
+vd4009,int,"Posição na ocupação (1=Empregado com carteira; 3=Militar/Estatutário; 5=Conta própria contribuinte; 7=Empregador contribuinte; pares=Sem contribuição)",1-9,IBGE/PNADc derivada
+vd4019,num,Rendimento efetivo do trabalho principal,Real (R$),IBGE/PNADc derivada
+vd4020,num,Rendimento efetivo de todos os trabalhos,Real (R$),IBGE/PNADc derivada
+v1028,num,Peso amostral final da pessoa,Real positivo,IBGE/PNADc
+upa,chr,Unidade Primária de Amostragem,Código IBGE,IBGE/PNADc
+estrato,chr,Estrato amostral,Código IBGE,IBGE/PNADc

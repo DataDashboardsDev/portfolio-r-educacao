@@ -1,11 +1,13 @@
 nome_var,tipo,descricao,formula,referencia
-ano_censo,int,Ano do Censo (cópia tipada de nu_ano_censo),"ano = nu_ano_censo",R/02_clean_matriculas.R
-faixa_idade,factor,"Fator de idade ordenado: 15, 16, 17 anos","cut(nu_idade)",R/02_clean_matriculas.R
-sexo,factor,"Sexo como fator (Masculino, Feminino)","factor(tp_sexo)",R/02_clean_matriculas.R
-cor_raca,factor,"Cor/raça como fator (Não declarada, Branca, Preta, Parda, Amarela, Indígena)","factor(tp_cor_raca)",R/02_clean_matriculas.R
-dep_admin,factor,"Dependência administrativa como fator (Federal, Estadual, Municipal, Privada)","factor(tp_dependencia)",R/02_clean_matriculas.R
-eja_em,int,"Indicador de matrícula em EJA do EM (1=Sim, 0=Não)","tp_etapa_ensino %in% c(71,72,73,74)",R/02_clean_matriculas.R
-ept_int,int,"Indicador de EM integrado à Educação Profissional Tecnológica (1=Sim, 0=Não)","tp_etapa_ensino %in% c(30,31,32,33,34)",R/02_clean_matriculas.R
-co_entidade_hash,chr,Hash SHA-256 truncado a 12 chars do código INEP da escola (LGPD),"substr(digest::digest(co_entidade,'sha256'),1,12)",R/utils_anonimizacao.R
-prob_conclusao,num,Probabilidade preditiva (modelo logit) de conclusão regular,Modelo fixest::feglm,R/05_modelo_conclusao.R
-y_concluiu,int,Variável-resposta binária do modelo: aprovado/concluído no ano,Derivada de tp_situacao,R/05_modelo_conclusao.R
+idade,int,Idade em anos completos (cópia tipada de v2009),"as.integer(v2009)",R/02_clean_pnadc.R
+faixa_idade,factor,"Faixa etária: 15-17, 18-24, 25-29","cut(idade, breaks=c(14,17,24,29))",R/02_clean_pnadc.R
+sexo,factor,"Sexo como fator (Homem, Mulher)","factor(v2007, levels=c(1,2))",R/02_clean_pnadc.R
+cor_raca,factor,"Cor/raça como fator (Branca, Preta, Amarela, Parda, Indígena, Ignorada)","factor(v2010, levels=c(1,2,3,4,5,9))",R/02_clean_pnadc.R
+situacao_dom,factor,"Situação do domicílio (Urbano, Rural)","factor(v1022, levels=c(1,2))",R/02_clean_pnadc.R
+regiao,factor,"Região geográfica (Norte, Nordeste, Sudeste, Sul, Centro-Oeste)",Mapeamento UF→região,R/02_clean_pnadc.R
+estudando,int,"Indicador de frequência escolar (1=Sim, 0=Não/NA tratado como 0)","fifelse(v3002 == 1, 1L, 0L); NA → 0",R/02_clean_pnadc.R
+nivel_instrucao,int,Nível de instrução (1-7) cópia tipada,"as.integer(vd3004)",R/02_clean_pnadc.R
+concluiu_em,int,"Indicador de conclusão do Ensino Médio (1=Sim, 0=Não)","as.integer(nivel_instrucao >= 5)",R/02_clean_pnadc.R
+ocupado,int,"Indicador de ocupação (1=Ocupado, 0=Desocupado ou fora da força de trabalho; NA tratado como 0 por convenção OCDE para NEET)","fifelse(vd4002 == 1, 1L, 0L); NA → 0",R/02_clean_pnadc.R
+formal,int,"Indicador de vínculo formal (1=CLT/militar/estatutário/conta própria contribuinte; 0=Informal)","as.integer(vd4009 %in% c(1,3,5,7))",R/02_clean_pnadc.R
+neet,int,"Indicador NEET (Not in Education, Employment or Training): jovem que não estuda e não está ocupado","as.integer(estudando == 0 & ocupado == 0)",R/02_clean_pnadc.R

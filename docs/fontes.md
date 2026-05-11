@@ -1,64 +1,59 @@
 # Fontes de dados
 
-## Microdados utilizados
+## Base utilizada
 
-| Base | Fonte | Período | URL |
-|------|-------|---------|-----|
-| Censo Escolar | INEP | 2019–2023 | [https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados/censo-escolar](https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados/censo-escolar) |
+| Base | Fonte | Período | Forma de acesso |
+|------|-------|---------|------------------|
+| PNAD Contínua | IBGE | 4º trimestre de 2023 | Pacote R `PNADcIBGE` (oficial) |
 
-Download direto (zip por ano):
+## Acesso programático
 
-```
-https://download.inep.gov.br/dados_abertos/microdados_censo_escolar_2019.zip
-https://download.inep.gov.br/dados_abertos/microdados_censo_escolar_2020.zip
-https://download.inep.gov.br/dados_abertos/microdados_censo_escolar_2021.zip
-https://download.inep.gov.br/dados_abertos/microdados_censo_escolar_2022.zip
-https://download.inep.gov.br/dados_abertos/microdados_censo_escolar_2023.zip
-```
+O download é totalmente automatizado pelo pacote R `PNADcIBGE`, mantido pelo IBGE/UFRJ:
 
-## Validação cruzada
+- **Pacote**: [`PNADcIBGE` no CRAN](https://cran.r-project.org/web/packages/PNADcIBGE/)
+- **Repositório fonte (IBGE)**: [Portal IBGE PNADc](https://www.ibge.gov.br/estatisticas/sociais/trabalho/17270-pnad-continua.html)
+- **FTP oficial**: [ftp.ibge.gov.br/Trabalho_e_Rendimento/](https://ftp.ibge.gov.br/Trabalho_e_Rendimento/Pesquisa_Nacional_por_Amostra_de_Domicilios_continua/)
 
-Os totais usados para validação cruzada (script `06_diagnostico_base.R::diag_validacao_inep`) vêm das **Sinopses Estatísticas da Educação Básica** do INEP:
+O download é feito em `R/01_download_pnadc.R` com cache local em `data/raw/pnadc_2023T4.rds` para evitar re-downloads.
 
-[https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/sinopses-estatisticas/educacao-basica](https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/sinopses-estatisticas/educacao-basica)
+## Variáveis solicitadas
 
-> **Nota:** os números no script são placeholders representativos; antes do envio final, devem ser substituídos pelos valores exatos publicados pelo INEP para o EM em SP em cada ano (consultar a respectiva Sinopse).
+O script seleciona ~25 variáveis explicitamente em `R/01_download_pnadc.R` (constante `VARS_PNADC`). A lista completa está documentada em `data/dicionarios/dicionario_pnadc.csv`.
 
-## Dicionários do Censo Escolar
+## Validação cruzada — referências oficiais
 
-Cada zip do INEP contém o dicionário de variáveis em `dicionario.xlsx` (na pasta `Anexos/`). Há também versão consolidada em PDF disponível em:
+| Indicador | Valor de referência | Fonte |
+|-----------|---------------------|-------|
+| População 15-29 (BR, 4ºT 2023) | ~48 milhões | [IBGE, projeção populacional 2023](https://www.ibge.gov.br/estatisticas/sociais/populacao/9103-estimativas-de-populacao.html) |
+| Taxa NEET (15-29, BR 2023) | ~19-22% | [IPEA — Carta de Conjuntura](https://www.ipea.gov.br/portal/) |
+| Taxa de conclusão do EM (18-24) | ~50-55% | PNADc séries históricas |
 
-[https://download.inep.gov.br/dados_abertos/microdados_censo_escolar_2023.zip](https://download.inep.gov.br/dados_abertos/microdados_censo_escolar_2023.zip) (incluso no pacote)
-
-## Pacotes R utilizados (resumo)
+## Pacotes R utilizados
 
 | Pacote | Função |
-|---|---|
-| `targets`     | Orquestração do pipeline reprodutível |
-| `tarchetypes` | Targets especiais (Quarto, files) |
-| `renv`        | Lockfile de dependências |
-| `here`        | Paths portáveis |
-| `data.table`  | Leitura e manipulação de microdados grandes |
-| `dplyr`/`tidyr` | Manipulação tidy |
-| `janitor`     | Padronização de nomes |
-| `fixest`      | Modelos com efeitos fixos (logit, lpm) |
-| `skimr`       | Sumários descritivos |
-| `naniar`      | Análise de missings |
-| `ggplot2`     | Visualização |
-| `scales`      | Formatação de eixos |
-| `arrow`       | Suporte a parquet (opcional) |
-| `digest`      | Hashing SHA-256 (LGPD) |
-| `quarto`      | Renderização de relatórios |
+|--------|--------|
+| `PNADcIBGE` | Download oficial da PNAD Contínua |
+| `survey` | Plano amostral complexo (svydesign, svyglm) |
+| `targets` / `tarchetypes` | Orquestração do pipeline |
+| `renv` | Lockfile de dependências |
+| `here` | Caminhos portáveis |
+| `data.table` / `dplyr` / `tidyr` | Manipulação |
+| `janitor` | Padronização de nomes |
+| `fixest` | Reserva para modelos com efeitos fixos (uso futuro) |
+| `skimr` / `naniar` | Diagnóstico de bases |
+| `ggplot2` / `scales` | Visualização |
+| `quarto` | Renderização de relatórios HTML |
 
 ## Quando atualizar este documento
 
-- Toda vez que uma nova base for incorporada;
-- Toda vez que o link oficial mudar;
-- Toda vez que a versão do INEP for atualizada (anualmente, em geral em dezembro);
-- Toda vez que se adicionar uma nova dependência R.
+- Quando uma nova base for incorporada;
+- Quando o pacote `PNADcIBGE` mudar a interface (raro, mas possível);
+- Quando o IBGE divulgar nova safra (anualmente, em maio/junho do ano seguinte);
+- Quando se adicionar nova dependência R.
 
 ## Datas de acesso
 
 | Data | Ação |
 |------|------|
-| 2026-05-10 | Setup inicial do projeto; downloads ainda não executados |
+| 2026-05-10 | Setup inicial do projeto |
+| 2026-05-10 | Pipeline reescrito para PNAD Contínua (substituindo Censo Escolar) |

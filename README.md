@@ -1,47 +1,56 @@
-# Trajetória de matrícula e conclusão do EM em SP
+# Jovens brasileiros 15–29: trajetória educacional e produtiva
 
-**Microdados do Censo Escolar (INEP) — 2019 a 2023 — Jovens 15 a 17 anos**
+**Análise reprodutível da PNAD Contínua (IBGE, 4º trimestre 2023) com modelo logístico de NEET**
 
-Pipeline reprodutível em R para **diagnóstico, descrição e modelagem** de matrículas no Ensino Médio no estado de São Paulo, com foco em jovens de 15 a 17 anos e participação em Educação Profissional Tecnológica (EPT) integrada.
+Pipeline reprodutível em R para diagnóstico, descrição e modelagem da situação educacional e ocupacional dos jovens brasileiros, com aderência às agendas de **Educação Profissional Tecnológica** e **Inclusão Produtiva** da Fundação Itaú para Educação e Cultura.
 
-![R](https://img.shields.io/badge/R-%E2%89%A54.3.0-blue)
+![R](https://img.shields.io/badge/R-4.3.0-blue)
 ![renv](https://img.shields.io/badge/deps-renv-2C7BB6)
 ![targets](https://img.shields.io/badge/pipeline-targets-1A8260)
+![survey](https://img.shields.io/badge/svydesign-PNAD-orange)
 ![license](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ---
 
 ## Por que este projeto
 
-Demonstrar um **fluxo completo e auditável** de processamento de microdados educacionais, alinhado às práticas exigidas em consultorias técnicas para fundações e órgãos públicos:
+Demonstrar um **fluxo completo e auditável** de processamento de microdados oficiais brasileiros, alinhado às práticas exigidas em consultorias técnicas para fundações e órgãos públicos:
 
-- Download direto da fonte primária (INEP), com **fallback** via BigQuery (`basedosdados`);
-- **Limpeza ano a ano** com harmonização de layout entre safras;
-- **Painel longitudinal** para análises temporais;
-- **Diagnóstico de qualidade** (missings, duplicatas, consistência, validação cruzada);
-- **Anonimização (LGPD)**: hash de IDs e supressão de células com n < 5;
-- **Modelagem econométrica** com efeitos fixos municipais e anuais (logit/LPM via `fixest`);
-- **Relatórios narrativos** em Quarto, com decisões metodológicas documentadas.
+- **Download programático** via pacote oficial (`PNADcIBGE`), com cache local;
+- **Limpeza e enriquecimento** com variáveis derivadas relevantes (NEET, conclusão EM, vínculo formal);
+- **Análise exploratória sistemática** antes da modelagem — validação cruzada com literatura consolidada (IBGE/IPEA);
+- **Plano amostral correto** (`survey::svydesign`) — pesos + UPAs + estratos, com tratamento de estratos singleton;
+- **Diagnóstico sistemático** de qualidade (missings, estrutura amostral, validação populacional, sanidade lógica);
+- **Modelagem estatística populacional** com `survey::svyglm` (logit ponderado);
+- **Relatórios narrativos** em Quarto, com decisões metodológicas documentadas;
+- **Anonimização e LGPD** explícitas;
+- **Reprodutibilidade** garantida por `renv.lock` (97 dependências travadas).
 
-## Eixos temáticos cobertos
+## Eixos do TR cobertos
 
-- **Censo Escolar** (base primária)
-- **Acesso, permanência e conclusão dos jovens** (variável-resposta do modelo)
-- Tangencia **EPT / Aprendizagem Profissional** (indicador `ept_int`)
+- **Acesso, permanência e conclusão dos jovens** (variável `concluiu_em` + análise por faixa etária)
+- **Inclusão Produtiva** (variável `NEET` + ocupação formal/informal + análise interseccional)
 
 ## Estrutura do repositório
 
 ```
 portfolio-r-educacao/
-├── R/                          # scripts numerados (setup → download → clean → model)
+├── R/                          # scripts numerados (setup → download → clean → analysis)
+│   ├── 00_setup.R             # paths, logger, constantes
+│   ├── 01_download_pnadc.R    # download via PNADcIBGE
+│   ├── 02_clean_pnadc.R       # filtragem + variáveis derivadas + survey design
+│   ├── 04_descritivas.R       # 5 figuras-chave com pesos amostrais
+│   ├── 05_modelo_neet.R       # logit ponderado via svyglm
+│   ├── 06_diagnostico_base.R  # skimr + missings + validação IBGE + sanidade
+│   └── utils_anonimizacao.R   # supressão k<5
 ├── data/
-│   ├── raw/                   # zips do INEP (não versionados)
-│   ├── processed/             # bases tratadas (não versionadas)
-│   └── dicionarios/           # dicionário de variáveis (CSV)
+│   ├── raw/                   # cache local da PNAD (não versionado)
+│   ├── processed/             # painel limpo em CSV/RDS (não versionado)
+│   └── dicionarios/           # dicionários de variáveis em CSV
 ├── outputs/
 │   ├── figures/               # PNG das descritivas
 │   ├── tables/                # CSV/xlsx dos resultados
-│   └── reports/               # Quarto (.qmd) renderizados em HTML
+│   └── reports/               # Quarto (.qmd) → HTML autocontido
 ├── docs/
 │   ├── metodologia.md
 │   └── fontes.md
@@ -70,64 +79,62 @@ targets::tar_visnetwork()
 Os relatórios HTML serão gerados em `outputs/reports/`:
 
 - `relatorio_diagnostico.html` — diagnóstico de qualidade da base;
-- `relatorio_analise.html` — descritivas + modelo logit com FE municipal.
+- `relatorio_analise.html` — descritivas + modelo logit ponderado de NEET.
 
 ## Pipeline (visão de alto nível)
 
 ```
-arquivos_brutos ─► matriculas_por_ano ─► painel_em ──► descritivas → figuras
-                                                  │
-                                                  ├─► diagnostico
-                                                  │
-                                                  ├─► modelo_logit ─► tabela_coefs
-                                                  │
-                                                  ├─► relatorio_diagnostico (Quarto)
-                                                  └─► relatorio_analise (Quarto)
+pnadc_raw ──► painel_jovens ──► desenho_pnadc ──► modelo_neet ─► tabela_coefs
+                            │
+                            ├──► diagnostico
+                            ├──► figuras
+                            ├──► relatorio_diagnostico (Quarto)
+                            └──► relatorio_analise (Quarto)
 ```
 
-## Resultados principais (preview)
+## Resultados principais
 
-> *Resultados consolidados disponíveis em `outputs/reports/relatorio_analise.html` após rodar o pipeline.*
+> *Detalhes completos em `outputs/reports/relatorio_analise.html` (renderizado neste repositório).*
 
-- **Migração entre redes:** queda relativa da rede estadual e aumento das redes privada e federal entre 2019 e 2023.
-- **EPT integrada:** participação cresce em todas as dependências, com pico na rede federal.
-- **Heterogeneidade municipal:** efeitos fixos de município capturam parcela relevante da variância, indicando que políticas estaduais homogêneas convivem com forte heterogeneidade local de implementação.
+- **Taxa de NEET nacional: 20,4%** (estimativa populacional ponderada pelos pesos amostrais) entre jovens 15-29 — n = 98.538 amostrados, representando 47,4 milhões de pessoas. Validação cruzada com IBGE: −1,2% de diferença, dentro de ±5%. A taxa amostral bruta (sem ponderação) é 22,4% — diferença de ~2 p.p. que ilustra a importância de aplicar o plano amostral.
+- **Padrão etário em U invertido**: NEET de **5,3% (15-17)** → **27,8% (18-24, pico)** → **25,8% (25-29)**. A transição escola-trabalho 18-24 é o gargalo crítico.
+- **Diferença marcante por sexo**: mulheres 29,0% vs. homens 15,9% (gap de 13 p.p.). Limitação conceitual da PNAD: trabalho doméstico não remunerado não é classificado como ocupação.
+- **Conclusão do EM** é um obstáculo persistente: **~30% dos jovens 25-29 não concluíram** o Ensino Médio.
+- **Modelo logit ponderado** (`svyglm`): mulheres têm chance ~120% maior de NEET que homens; jovens indígenas e pardos têm as maiores chances de NEET por raça; concluir o EM reduz a chance em ~10%. Todos os efeitos significativos a p < 0,001.
 
 ## Decisões metodológicas
 
 Documentadas em [docs/metodologia.md](docs/metodologia.md):
 
-- Recorte do universo (UF, idade, anos);
-- Definição da variável-resposta `y_concluiu`;
-- Justificativa para FE municipal + anual;
+- Por que PNAD Contínua e não Censo Escolar atual;
+- Definição operacional de NEET, conclusão EM, vínculo formal;
+- Por que `survey::svyglm` (e não `glm` ou `fixest`);
 - Tratamento de missings;
 - Anonimização (LGPD).
 
 ## Limitações conhecidas
 
-- O período 2020–2021 sofre impacto pandêmico — modelos longitudinais futuros devem incorporar dummies específicas ou testes de robustez.
-- A variável-resposta usa **proxy** (idade 17 ou etapa final). A versão definitiva (Fase 2) incorporará `tp_situacao` consolidada.
-- Sem variável de NSE individual — controles socioeconômicos absorvidos pelo FE municipal.
+- Dados **cross-sectional** (um trimestre) — não permitem inferência causal pura, apenas associações.
+- **Trabalho doméstico não remunerado** não é classificado como ocupação pela PNAD, o que pode **inflar artificialmente a NEET feminina**.
+- Análise é **nacional** — recortes mais finos (município, microrregião) ficam para Fase 2.
 
 ## Roadmap (Fase 2)
 
-Caso o projeto evolua, próximos módulos previstos:
-
-1. **PNAD Contínua + jovens NEET** (eixo Inclusão Produtiva).
-2. **RAIS + Aprendizagem Profissional** (eixo direto da Lei 10.097).
-3. **DiD: Novo Ensino Médio sobre IDEB/SAEB** — avaliação de impacto causal.
-4. **Cruzamento Censo Escolar × RAIS** — egressos do EM e inserção no mercado formal.
-5. **Dashboard Quarto estático** (gh-pages) — consolidação visual.
+1. **Painel longitudinal PNADc** (estrutura rotativa de 5 visitas/domicílio) — análise de transições NEET ↔ ocupado.
+2. **Censo Escolar agregado por escola** — perfil das escolas que oferecem EM em SP.
+3. **RAIS** — validação da inserção formal por registro administrativo.
+4. **DiD: Novo Ensino Médio sobre IDEB/SAEB** — avaliação de impacto causal.
+5. **Dashboard Quarto estático** (GitHub Pages).
 
 ## Fontes
 
-- INEP. *Microdados do Censo Escolar*. Disponível em [gov.br/inep](https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados/censo-escolar).
-- Lista completa em [docs/fontes.md](docs/fontes.md).
+- IBGE. *PNAD Contínua, 4ºT 2023*. Acesso via pacote R [`PNADcIBGE`](https://cran.r-project.org/web/packages/PNADcIBGE/).
+- Detalhes em [docs/fontes.md](docs/fontes.md).
 
 ## Autor
 
-**Samuel Volpe**
-samuvolpe1@gmail.com
+**Samuel Volpe** — Data Dashboards
+samuel.volpe@datadashboards.com.br
 
 ## Licença
 
