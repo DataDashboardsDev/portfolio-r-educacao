@@ -2,32 +2,33 @@
 # 04_descritivas.R — Estatísticas descritivas e figuras
 # =============================================================================
 #
-# Gera as 5 figuras-chave do projeto:
-#   1. Evolução de matrículas por ano e dependência administrativa
-#   2. Distribuição por idade × ano
-#   3. Composição por cor/raça (proporção)
-#   4. Participação EPT integrada × ano
-#   5. Heatmap: município top-20 × ano (matrículas)
+# Gera as 5 figuras principais usando pesos amostrais da PNAD:
+#   1. Pirâmide etária dos jovens (15-29) por sexo
+#   2. Distribuição da situação (estudando/ocupado/NEET) por faixa etária
+#   3. Taxa de NEET por região e sexo
+#   4. Taxa de NEET por cor/raça
+#   5. Conclusão do EM por faixa etária e região
 #
-# Também exporta tabelas resumo em outputs/tables/.
+# Todas as estatísticas usam survey design para representação populacional.
 # =============================================================================
 
 
-#' Função orquestradora — gera todas as figuras descritivas
+#' Orquestrador — gera todas as figuras descritivas
 #'
-#' @param painel data.table do painel longitudinal
+#' @param painel data.table com os microdados limpos
+#' @param desenho survey design com pesos amostrais
 #' @param dir_out Diretório de saída para PNGs
-#' @return Vetor de caminhos de arquivos gerados (para tar_target file)
-gerar_descritivas <- function(painel, dir_out = DIR_FIGURES) {
+#' @return Vetor de caminhos de arquivos gerados
+gerar_descritivas <- function(painel, desenho, dir_out = DIR_FIGURES) {
 
   ensure_dir(dir_out)
   arquivos <- character()
 
-  arquivos["fig1"] <- fig_evolucao_dependencia(painel, dir_out)
-  arquivos["fig2"] <- fig_distribuicao_idade(painel, dir_out)
-  arquivos["fig3"] <- fig_composicao_cor_raca(painel, dir_out)
-  arquivos["fig4"] <- fig_participacao_ept(painel, dir_out)
-  arquivos["fig5"] <- fig_heatmap_municipios(painel, dir_out)
+  arquivos["fig1"] <- fig_piramide_etaria(painel, dir_out)
+  arquivos["fig2"] <- fig_situacao_por_idade(painel, dir_out)
+  arquivos["fig3"] <- fig_neet_por_regiao_sexo(painel, dir_out)
+  arquivos["fig4"] <- fig_neet_por_raca(painel, dir_out)
+  arquivos["fig5"] <- fig_conclusao_em(painel, dir_out)
 
   exportar_tabelas_resumo(painel)
 
@@ -37,142 +38,176 @@ gerar_descritivas <- function(painel, dir_out = DIR_FIGURES) {
 
 
 # -----------------------------------------------------------------------------
+# Helpers
+# -----------------------------------------------------------------------------
+
+#' Soma de pesos por grupos
+pop_por_grupo <- function(painel, grupos) {
+  painel[, .(pop = sum(v1028, na.rm = TRUE)),
+         by = c(grupos)]
+}
+
+
+# -----------------------------------------------------------------------------
 # Figuras
 # -----------------------------------------------------------------------------
 
-fig_evolucao_dependencia <- function(painel, dir_out) {
+fig_piramide_etaria <- function(painel, dir_out) {
 
-  resumo <- painel[, .(n = .N), by = .(ano_censo, dep_admin)]
+  resumo <- pop_por_grupo(painel, c("idade", "sexo"))
+  resumo[, pop_sign := ifelse(sexo == "Homem", -pop, pop)]
 
   p <- ggplot2::ggplot(
     resumo,
-    ggplot2::aes(x = ano_censo, y = n, color = dep_admin)
+    ggplot2::aes(x = idade, y = pop_sign, fill = sexo)
   ) +
-    ggplot2::geom_line(linewidth = 1.1) +
-    ggplot2::geom_point(size = 2.5) +
-    ggplot2::scale_y_continuous(labels = scales::label_number(big.mark = ".")) +
+    ggplot2::geom_col() +
+    ggplot2::coord_flip() +
+    ggplot2::scale_y_continuous(labels = function(x) format(abs(x), big.mark = ".")) +
+    ggplot2::scale_fill_manual(values = c("Homem" = "#3B82F6", "Mulher" = "#EC4899")) +
     ggplot2::labs(
-      title    = "Matrículas no EM (15-17 anos) em SP, por dependência",
-      subtitle = "Censo Escolar | 2019-2023",
-      x = NULL, y = "Matrículas", color = "Dependência",
-      caption = "Fonte: INEP, Microdados do Censo Escolar."
+      title    = "Pirâmide etária dos jovens brasileiros (15-29 anos)",
+      subtitle = "Estimativas populacionais com pesos amostrais",
+      x = "Idade", y = "População", fill = NULL,
+      caption = "Fonte: PNAD Contínua / IBGE, 4º trimestre 2023."
     ) +
     ggplot2::theme_minimal(base_size = 12)
 
-  caminho <- file.path(dir_out, "fig1_evolucao_dependencia.png")
-  ggplot2::ggsave(caminho, p, width = 9, height = 5, dpi = 150)
+  caminho <- file.path(dir_out, "fig1_piramide_etaria.png")
+  ggplot2::ggsave(caminho, p, width = 9, height = 6, dpi = 150)
   caminho
 }
 
 
-fig_distribuicao_idade <- function(painel, dir_out) {
+fig_situacao_por_idade <- function(painel, dir_out) {
 
-  resumo <- painel[, .(n = .N), by = .(ano_censo, faixa_idade)]
+  d <- data.table::copy(painel)
+  d[, situacao := data.table::fcase(
+    estudando == 1 & ocupado == 1, "Estuda e trabalha",
+    estudando == 1 & ocupado == 0, "Só estuda",
+    estudando == 0 & ocupado == 1, "Só trabalha",
+    estudando == 0 & ocupado == 0, "NEET"
+  )]
+  d[, situacao := factor(situacao,
+                         levels = c("Só estuda", "Estuda e trabalha",
+                                    "Só trabalha", "NEET"))]
+
+  resumo <- d[!is.na(situacao),
+              .(pop = sum(v1028, na.rm = TRUE)),
+              by = .(faixa_idade, situacao)]
 
   p <- ggplot2::ggplot(
     resumo,
-    ggplot2::aes(x = factor(ano_censo), y = n, fill = faixa_idade)
+    ggplot2::aes(x = faixa_idade, y = pop, fill = situacao)
   ) +
     ggplot2::geom_col(position = "fill") +
     ggplot2::scale_y_continuous(labels = scales::percent_format()) +
+    ggplot2::scale_fill_manual(values = c(
+      "Só estuda"          = "#22C55E",
+      "Estuda e trabalha"  = "#3B82F6",
+      "Só trabalha"        = "#F59E0B",
+      "NEET"               = "#EF4444"
+    )) +
     ggplot2::labs(
-      title    = "Composição etária das matrículas no EM em SP",
-      subtitle = "Proporção por idade (15, 16, 17 anos)",
-      x = NULL, y = "%", fill = "Faixa",
-      caption = "Fonte: INEP, Microdados do Censo Escolar."
+      title    = "Situação de jovens por faixa etária",
+      subtitle = "Distribuição de estudantes, trabalhadores e NEET",
+      x = "Faixa etária", y = "% da população", fill = "Situação",
+      caption = "Fonte: PNAD Contínua / IBGE, 4º trimestre 2023."
     ) +
     ggplot2::theme_minimal(base_size = 12)
 
-  caminho <- file.path(dir_out, "fig2_distribuicao_idade.png")
-  ggplot2::ggsave(caminho, p, width = 9, height = 5, dpi = 150)
+  caminho <- file.path(dir_out, "fig2_situacao_por_idade.png")
+  ggplot2::ggsave(caminho, p, width = 9, height = 6, dpi = 150)
   caminho
 }
 
 
-fig_composicao_cor_raca <- function(painel, dir_out) {
+fig_neet_por_regiao_sexo <- function(painel, dir_out) {
 
-  resumo <- painel[!is.na(cor_raca),
-                   .(n = .N), by = .(ano_censo, cor_raca)]
-
-  p <- ggplot2::ggplot(
-    resumo,
-    ggplot2::aes(x = factor(ano_censo), y = n, fill = cor_raca)
-  ) +
-    ggplot2::geom_col(position = "fill") +
-    ggplot2::scale_y_continuous(labels = scales::percent_format()) +
-    ggplot2::labs(
-      title    = "Composição por cor/raça das matrículas",
-      subtitle = "Jovens 15-17 anos em SP, 2019-2023",
-      x = NULL, y = "%", fill = "Cor/Raça",
-      caption = "Fonte: INEP, Microdados do Censo Escolar."
-    ) +
-    ggplot2::theme_minimal(base_size = 12)
-
-  caminho <- file.path(dir_out, "fig3_composicao_cor_raca.png")
-  ggplot2::ggsave(caminho, p, width = 9, height = 5, dpi = 150)
-  caminho
-}
-
-
-fig_participacao_ept <- function(painel, dir_out) {
-
-  resumo <- painel[, .(prop_ept = mean(ept_int)), by = .(ano_censo, dep_admin)]
+  resumo <- painel[!is.na(neet) & !is.na(regiao),
+                   .(taxa_neet = sum((neet == 1) * v1028, na.rm = TRUE) /
+                                 sum(v1028, na.rm = TRUE)),
+                   by = .(regiao, sexo)]
 
   p <- ggplot2::ggplot(
     resumo,
-    ggplot2::aes(x = ano_censo, y = prop_ept,
-                 color = dep_admin, group = dep_admin)
+    ggplot2::aes(x = regiao, y = taxa_neet, fill = sexo)
   ) +
-    ggplot2::geom_line(linewidth = 1.1) +
-    ggplot2::geom_point(size = 2.5) +
+    ggplot2::geom_col(position = "dodge") +
     ggplot2::scale_y_continuous(labels = scales::percent_format(accuracy = 0.1)) +
+    ggplot2::scale_fill_manual(values = c("Homem" = "#3B82F6", "Mulher" = "#EC4899")) +
     ggplot2::labs(
-      title    = "Participação do EM integrado à EPT em SP",
-      subtitle = "% de matrículas no EM integrado, por dependência",
-      x = NULL, y = "% EPT integrada", color = "Dependência",
-      caption = "Fonte: INEP, Microdados do Censo Escolar."
+      title    = "Taxa de NEET por região e sexo",
+      subtitle = "Jovens 15-29 anos que não estudam nem trabalham",
+      x = NULL, y = "% NEET", fill = NULL,
+      caption = "Fonte: PNAD Contínua / IBGE, 4º trimestre 2023."
     ) +
     ggplot2::theme_minimal(base_size = 12)
 
-  caminho <- file.path(dir_out, "fig4_participacao_ept.png")
-  ggplot2::ggsave(caminho, p, width = 9, height = 5, dpi = 150)
+  caminho <- file.path(dir_out, "fig3_neet_regiao_sexo.png")
+  ggplot2::ggsave(caminho, p, width = 9, height = 6, dpi = 150)
   caminho
 }
 
 
-fig_heatmap_municipios <- function(painel, dir_out) {
-
-  if (!"co_municipio" %in% names(painel)) {
-    log_msg("co_municipio ausente — pulando heatmap", "WARN")
-    return(NA_character_)
-  }
-
-  # Top 20 municípios por volume total
-  top <- painel[, .N, by = co_municipio][order(-N)][1:20, co_municipio]
+fig_neet_por_raca <- function(painel, dir_out) {
 
   resumo <- painel[
-    co_municipio %in% top,
-    .(n = .N),
-    by = .(co_municipio, ano_censo)
+    !is.na(neet) & !is.na(cor_raca) & cor_raca != "Ignorada",
+    .(taxa_neet = sum((neet == 1) * v1028, na.rm = TRUE) /
+                  sum(v1028, na.rm = TRUE)),
+    by = .(cor_raca, sexo)
   ]
 
   p <- ggplot2::ggplot(
     resumo,
-    ggplot2::aes(x = factor(ano_censo),
-                 y = reorder(factor(co_municipio), n),
-                 fill = n)
+    ggplot2::aes(x = reorder(cor_raca, taxa_neet),
+                 y = taxa_neet, fill = sexo)
   ) +
-    ggplot2::geom_tile(color = "white") +
-    ggplot2::scale_fill_viridis_c(labels = scales::label_number(big.mark = ".")) +
+    ggplot2::geom_col(position = "dodge") +
+    ggplot2::coord_flip() +
+    ggplot2::scale_y_continuous(labels = scales::percent_format(accuracy = 0.1)) +
+    ggplot2::scale_fill_manual(values = c("Homem" = "#3B82F6", "Mulher" = "#EC4899")) +
     ggplot2::labs(
-      title    = "Top 20 municípios paulistas — matrículas EM 15-17 anos",
-      x = NULL, y = "Código do município", fill = "Matrículas",
-      caption = "Fonte: INEP, Microdados do Censo Escolar."
+      title    = "Taxa de NEET por cor/raça e sexo",
+      subtitle = "Recorte interseccional — jovens 15-29 anos",
+      x = NULL, y = "% NEET", fill = NULL,
+      caption = "Fonte: PNAD Contínua / IBGE, 4º trimestre 2023."
     ) +
-    ggplot2::theme_minimal(base_size = 11)
+    ggplot2::theme_minimal(base_size = 12)
 
-  caminho <- file.path(dir_out, "fig5_heatmap_municipios.png")
-  ggplot2::ggsave(caminho, p, width = 9, height = 7, dpi = 150)
+  caminho <- file.path(dir_out, "fig4_neet_raca.png")
+  ggplot2::ggsave(caminho, p, width = 9, height = 6, dpi = 150)
+  caminho
+}
+
+
+fig_conclusao_em <- function(painel, dir_out) {
+
+  resumo <- painel[
+    !is.na(concluiu_em) & !is.na(regiao) & idade >= 18,
+    .(taxa_conclusao = sum((concluiu_em == 1) * v1028, na.rm = TRUE) /
+                       sum(v1028, na.rm = TRUE)),
+    by = .(regiao, faixa_idade)
+  ][faixa_idade != "15-17"]
+
+  p <- ggplot2::ggplot(
+    resumo,
+    ggplot2::aes(x = regiao, y = taxa_conclusao, fill = faixa_idade)
+  ) +
+    ggplot2::geom_col(position = "dodge") +
+    ggplot2::scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+    ggplot2::scale_fill_brewer(palette = "Set2") +
+    ggplot2::labs(
+      title    = "Taxa de conclusão do Ensino Médio",
+      subtitle = "Jovens 18-29 anos por região",
+      x = NULL, y = "% que concluiu EM", fill = "Faixa etária",
+      caption = "Fonte: PNAD Contínua / IBGE, 4º trimestre 2023."
+    ) +
+    ggplot2::theme_minimal(base_size = 12)
+
+  caminho <- file.path(dir_out, "fig5_conclusao_em.png")
+  ggplot2::ggsave(caminho, p, width = 9, height = 6, dpi = 150)
   caminho
 }
 
@@ -185,16 +220,24 @@ exportar_tabelas_resumo <- function(painel, dir_out = DIR_TABLES) {
 
   ensure_dir(dir_out)
 
-  # 1. Contagem por ano
-  t1 <- painel[, .(matriculas = .N), by = ano_censo][order(ano_censo)]
-  readr::write_csv(t1, file.path(dir_out, "tabela_matriculas_por_ano.csv"))
+  # População estimada por faixa etária
+  t1 <- painel[, .(pop = sum(v1028, na.rm = TRUE)),
+               by = faixa_idade][order(faixa_idade)]
+  readr::write_csv(t1, file.path(dir_out, "tabela_pop_por_faixa.csv"))
 
-  # 2. Cruzamento idade × dep_admin × ano
-  t2 <- painel[, .(matriculas = .N),
-               by = .(ano_censo, faixa_idade, dep_admin)][
-                 order(ano_censo, faixa_idade, dep_admin)
-               ]
-  readr::write_csv(t2, file.path(dir_out, "tabela_idade_x_dep_x_ano.csv"))
+  # Taxas-chave por região
+  t2 <- painel[!is.na(neet) & !is.na(regiao),
+               .(
+                 pop          = sum(v1028, na.rm = TRUE),
+                 taxa_neet    = sum((neet == 1) * v1028, na.rm = TRUE) /
+                                sum(v1028, na.rm = TRUE),
+                 taxa_estudo  = sum((estudando == 1) * v1028, na.rm = TRUE) /
+                                sum(v1028, na.rm = TRUE),
+                 taxa_ocupado = sum((ocupado == 1) * v1028, na.rm = TRUE) /
+                                sum(v1028, na.rm = TRUE)
+               ),
+               by = regiao][order(regiao)]
+  readr::write_csv(t2, file.path(dir_out, "tabela_taxas_por_regiao.csv"))
 
   log_msg("Tabelas resumo exportadas em outputs/tables/")
 }
