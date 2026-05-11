@@ -1,14 +1,16 @@
 Package: portfolioReducacao
-Title: Trajetória de matrícula e conclusão do EM em SP — Censo Escolar 2019–2023
-Version: 0.1.0
+Title: Jovens brasileiros 15-29 — PNAD Contínua 2023 com modelo logit de NEET
+Version: 0.2.0
 Authors@R:
-    person("Samuel", "Volpe", email = "samuvolpe1@gmail.com", role = c("aut", "cre"))
-Description: Pipeline reprodutível em R para tratamento, análise e modelagem
-    de microdados do Censo Escolar (INEP), com foco em jovens de 15 a 17 anos
-    matriculados no Ensino Médio no estado de São Paulo entre 2019 e 2023.
-    Inclui rotinas de download, limpeza, anonimização (LGPD), construção de
-    painel longitudinal, estatísticas descritivas, diagnóstico de bases e
-    modelagem de probabilidade de conclusão com efeitos fixos municipais.
+    person("Samuel", "Volpe", email = "samuel.volpe@datadashboards.com.br",
+           role = c("aut", "cre"))
+Description: Pipeline reprodutível em R para download, limpeza, descrição e
+    modelagem dos microdados da PNAD Contínua (IBGE, 4ºT 2023), com foco em
+    jovens de 15 a 29 anos. Inclui rotinas de download via pacote oficial
+    PNADcIBGE, construção de plano amostral correto via survey, indicadores
+    derivados (NEET, conclusão EM, vínculo formal), diagnóstico de bases,
+    análises descritivas com pesos amostrais e modelagem logística da
+    probabilidade de NEET via survey::svyglm.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -25,6 +27,8 @@ Imports:
     data.table,
     stringr,
     janitor,
+    survey,
+    PNADcIBGE,
     fixest,
     skimr,
     naniar,
