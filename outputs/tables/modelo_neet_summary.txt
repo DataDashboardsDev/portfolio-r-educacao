@@ -1,0 +1,29 @@
+
+Call:
+svyglm(formula = neet ~ idade + sexo + cor_raca + regiao + concluiu_em, 
+    design = desenho_valido, family = quasibinomial(link = "logit"))
+
+Survey design:
+subset(desenho, validos)
+
+Coefficients:
+                    Estimate Std. Error t value Pr(>|t|)    
+(Intercept)        -3.362875   0.069125 -48.649  < 2e-16 ***
+idade               0.072349   0.002883  25.096  < 2e-16 ***
+sexoMulher          0.790572   0.023236  34.023  < 2e-16 ***
+cor_racaPreta       0.169340   0.041787   4.052 5.10e-05 ***
+cor_racaAmarela    -0.052139   0.149590  -0.349 0.727436    
+cor_racaParda       0.252084   0.029619   8.511  < 2e-16 ***
+cor_racaIndígena    0.507143   0.122812   4.129 3.66e-05 ***
+regiaoNordeste      0.264394   0.034257   7.718 1.26e-14 ***
+regiaoSudeste      -0.333730   0.039739  -8.398  < 2e-16 ***
+regiaoSul          -0.598222   0.044910 -13.320  < 2e-16 ***
+regiaoCentro-Oeste -0.469775   0.048396  -9.707  < 2e-16 ***
+concluiu_em        -0.108479   0.028693  -3.781 0.000157 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+(Dispersion parameter for quasibinomial family taken to be 1.00846)
+
+Number of Fisher Scoring iterations: 4
+
