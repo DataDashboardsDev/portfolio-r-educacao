@@ -2,9 +2,9 @@
 data/raw/*
 !data/raw/.gitkeep
 
-# Dados processados grandes (commitar somente amostras pequenas, se necessário)
-data/processed/*.zip
-data/processed/*.parquet
+# Dados processados (reproduzíveis via tar_make — não versionados)
+data/processed/*
+!data/processed/.gitkeep
 
 # R / RStudio
 .Rproj.user/
@@ -28,10 +28,13 @@ _targets/
 # Quarto / RMarkdown
 *_files/
 *_cache/
+.quarto/
+# HTMLs e PDFs: ignora por padrão, MAS permite os relatórios renderizados
 *.html
 *.pdf
+!outputs/reports/*.html
+!outputs/reports/*.pdf
 !docs/**/*.pdf
-.quarto/
 
 # Sistema operacional
 .DS_Store
